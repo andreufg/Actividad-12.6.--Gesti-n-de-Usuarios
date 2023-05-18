@@ -3,7 +3,7 @@ package es.progcipfpbatoi.controlador;
 import es.progcipfpbatoi.exceptions.AlreadyExistsException;
 import es.progcipfpbatoi.exceptions.DatabaseErrorException;
 import es.progcipfpbatoi.exceptions.NotFoundException;
-import es.progcipfpbatoi.modelo.entidades.User;
+import es.progcipfpbatoi.modelo.dto.User;
 import es.progcipfpbatoi.modelo.repositorios.UserRepository;
 import es.progcipfpbatoi.util.AlertMessages;
 import javafx.fxml.FXML;

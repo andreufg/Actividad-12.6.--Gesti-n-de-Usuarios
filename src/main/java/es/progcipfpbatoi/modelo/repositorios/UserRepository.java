@@ -2,7 +2,7 @@ package es.progcipfpbatoi.modelo.repositorios;
 
 import es.progcipfpbatoi.exceptions.DatabaseErrorException;
 import es.progcipfpbatoi.exceptions.NotFoundException;
-import es.progcipfpbatoi.modelo.entidades.User;
+import es.progcipfpbatoi.modelo.dto.User;
 
 import java.util.ArrayList;
 

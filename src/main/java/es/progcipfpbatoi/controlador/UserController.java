@@ -1,6 +1,6 @@
 package es.progcipfpbatoi.controlador;
 
-import es.progcipfpbatoi.modelo.entidades.User;
+import es.progcipfpbatoi.modelo.dto.User;
 import es.progcipfpbatoi.modelo.repositorios.UserRepository;
 import es.progcipfpbatoi.util.AlertMessages;
 import javafx.collections.FXCollections;
@@ -8,11 +8,8 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.Node;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
-import javafx.scene.input.MouseEvent;
-import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;

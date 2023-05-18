@@ -1,7 +1,6 @@
-package es.progcipfpbatoi.modelo.entidades;
+package es.progcipfpbatoi.modelo.dto;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Objects;
 
 public class User {
