@@ -3,66 +3,69 @@ package es.progcipfpbatoi.modelo.dao;
 import es.progcipfpbatoi.exceptions.DatabaseErrorException;
 import es.progcipfpbatoi.exceptions.NotFoundException;
 import es.progcipfpbatoi.modelo.dto.User;
+import es.progcipfpbatoi.services.MySqlConnection;
 
-import java.io.*;
+import java.sql.*;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Objects;
 
-public class FileUserDAO implements UserDAO{
-    private static final String DATABASE_FILE = "resources/database/usuarios.txt";
-    private static final int DNI = 0;
-    private static final int NAME = 1;
-    private static final int SURNAME = 2;
-    private static final int EMAIL = 3;
-    private static final int ZIPCODE = 4;
-    private static final int MOBILEPHONE = 5;
-    private static final int BIRTHDAY = 6;
-    private static final int PASSWORD = 7;
-    private File file;
+public class FileUserDAO implements UserDAO {
+    private Connection connection;
 
-    public FileUserDAO() {
-        this.file = new File(DATABASE_FILE);
-    }
+    private static final String TABLE_NAME = "Users";
 
     @Override
     public ArrayList<User> findAll() throws DatabaseErrorException {
-        try{
-            ArrayList<User> usuarios = new ArrayList<>();
-            try(BufferedReader bufferedReader = getReader()){
+        String sql = String.format("SELECT * FROM %s", TABLE_NAME);
 
-                do {
-                    String register = bufferedReader.readLine();
-                    if (register == null){
-                        return usuarios;
-                    }
-                    usuarios.add(getUserFromRegister(register));
-                }while (true);
+        ArrayList<User> users = new ArrayList<>();
+        connection = new MySqlConnection().conectar();
+
+        try (
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery(sql);
+        ) {
+
+            while (resultSet.next()) {
+                User user = getUserFromRegister(resultSet);
+                users.add(user);
             }
-        }catch (IOException e) {
-            throw new RuntimeException(e);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new DatabaseErrorException("Ha ocurrido un error en la conexión o acceso a la base de datos (select)");
+        }
+
+        return users;
+    }
+
+    public User findByDNI(String dni) throws DatabaseErrorException {
+        try {
+            return getById(dni);
+        } catch (NotFoundException ex) {
+            return null;
         }
     }
-    private BufferedReader getReader() throws IOException {
-        return new BufferedReader(new FileReader(file));
-    }
-    private User getUserFromRegister(String register){
-        String[] field = register.split(";");
-        String name = field[NAME];
-        String surname = field[SURNAME];
-        String dni = field[DNI];
-        String email = field[EMAIL];
-        String zipCode = field[ZIPCODE];
-        String mobilePhone = field[MOBILEPHONE];
-        LocalDate birthday = LocalDate.parse(field[BIRTHDAY]);
-        String password = field[PASSWORD];
-        return new User(name,surname,dni,email,zipCode,mobilePhone,birthday,password);
+
+    private User getUserFromRegister(ResultSet resultSet) throws SQLException {
+        String name = resultSet.getString("name");
+        String surname = resultSet.getString("surname");
+        String dni = resultSet.getString("dni");
+        String email = resultSet.getString("email");
+        String zipCode = resultSet.getString("zipCode");
+        String mobilePhone = resultSet.getString("mobilePhone");
+        LocalDate birthday = LocalDate.parse(resultSet.getString("birthday"));
+        String password = resultSet.getString("password");
+        return new User(name, surname, dni, email, zipCode, mobilePhone, birthday, password);
     }
 
     @Override
     public ArrayList<User> findAll(String email) throws DatabaseErrorException {
         ArrayList<User> usuarios = new ArrayList<>();
-        for (User usuario:findAll()) {
-            if (usuario.getEmail().equals(email)){
+        for (User usuario : findAll()) {
+            if (usuario.getEmail().equals(email)) {
                 usuarios.add(usuario);
             }
         }
@@ -71,79 +74,109 @@ public class FileUserDAO implements UserDAO{
 
     @Override
     public User getById(String dni) throws NotFoundException, DatabaseErrorException {
-        for (User usuario:findAll()) {
-            if (usuario.getDni().equals(dni)){
-                return usuario;
+        String sql = String.format("SELECT * FROM %s WHERE dni = ?", TABLE_NAME);
+        connection = new MySqlConnection().conectar();
+
+        try (
+                PreparedStatement statement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
+        ) {
+            statement.setString(1, dni);
+            ResultSet resultSet = statement.executeQuery();
+
+            while (resultSet.next()) {
+                User user = getUserFromRegister(resultSet);
+                if (Objects.equals(user.getDni(), dni)) {
+                    return user;
+                }
             }
+
+            throw new NotFoundException("No existe un usuario con el DNI " + dni);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new DatabaseErrorException("Ha ocurrido un error en el acceso o conexión a la base de datos (select)");
         }
-        return null;
     }
 
     @Override
     public void save(User user) throws DatabaseErrorException {
-        try {
-
-                try(BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file, true))) {
-
-                    if (getById(user.getDni())==null){
-                        bufferedWriter.write(getRegisterFromUser(user));
-                        bufferedWriter.newLine();
-                    }else {
-                        for (User usuario :findAll()) {
-                            if (!usuario.equals(user)) {
-                                bufferedWriter.write(getRegisterFromUser(usuario));
-                                bufferedWriter.newLine();
-                            }else {
-                                updateOrRemove(user,true);
-                            }
-
-                        }
-
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-
-        } catch (NotFoundException e) {
-            throw new RuntimeException(e);
+        if (findByDNI(user.getDni()) == null) {
+            insert(user);
+        } else {
+            update(user);
         }
     }
-    private void updateOrRemove(User user, boolean update) throws DatabaseErrorException {
-        ArrayList<User> users = findAll();
-        try (BufferedWriter bufferedWriter = getWriter(false)) {
-            for (User userItem : users) {
-                if (!userItem.equals(user)) {
-                    bufferedWriter.write(getRegisterFromUser(userItem));
-                    bufferedWriter.newLine();
-                }else if (update) {
-                    bufferedWriter.write(getRegisterFromUser(user));
-                    bufferedWriter.newLine();
-                }
+
+    private User update(User user) throws DatabaseErrorException {
+        String sql = String.format("UPDATE %s SET name = ?, surname = ?, email = ?, zipCode = ?, mobilePhone = ?, birthday = ?, password = ? WHERE dni = ?",
+                TABLE_NAME);
+
+        try (
+                Connection connection = new MySqlConnection().conectar();
+                PreparedStatement statement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)
+        ) {
+            statement.setString(1, user.getName());
+            statement.setString(2, user.getSurname());
+            statement.setString(3, user.getEmail());
+            statement.setString(4, user.getZipCode());
+            statement.setString(5, user.getMobilePhone());
+            statement.setString(6, user.getBirthday().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            statement.setString(7, user.getPassword());
+            statement.setString(8, user.getDni());
+            statement.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new DatabaseErrorException("Ha ocurrido un error en el acceso o conexión a la base de datos (update)");
+        }
+
+        return user;
+    }
+
+    private User insert(User user) throws DatabaseErrorException {
+        String sql = String.format("INSERT INTO %s (name, surname, dni, email, zipCode, mobilePhone, birthday, password) VALUES (?,?,?,?,?,?,?,?)",
+                TABLE_NAME);
+        connection = new MySqlConnection().conectar();
+
+        try (
+                PreparedStatement preparedStatement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)
+        ) {
+            preparedStatement.setString(1, user.getName());
+            preparedStatement.setString(2, user.getSurname());
+            preparedStatement.setString(3, user.getDni());
+            preparedStatement.setString(4, user.getEmail());
+            preparedStatement.setString(5, user.getZipCode());
+            preparedStatement.setString(6, user.getMobilePhone());
+            preparedStatement.setString(7, user.getBirthday().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            preparedStatement.setString(8, user.getPassword());
+            preparedStatement.executeUpdate();
+
+            ResultSet resultSet = preparedStatement.getGeneratedKeys();
+            if (resultSet.next()) {
+                user.setDni(resultSet.getString(3));
             }
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            throw new DatabaseErrorException("Error en el acceso a la base de datos de tareas");
+
+            return user;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new DatabaseErrorException("Ha ocurrido un error en el acceso o conexión a la base de datos (insert)");
         }
     }
-    private BufferedWriter getWriter(boolean append) throws IOException {
-        return new BufferedWriter(new FileWriter(file, append));
-    }
-    private String getRegisterFromUser(User user) {
-        String[] fields = new String[8];
-        fields[NAME] = user.getName();
-        fields[SURNAME] = user.getSurname();
-        fields[DNI] = user.getDni();
-        fields[EMAIL] = user.getEmail();
-        fields[ZIPCODE] = user.getZipCode();
-        fields[MOBILEPHONE] = user.getMobilePhone();
-        fields[BIRTHDAY] = String.valueOf(user.getBirthday());
-        fields[PASSWORD] = user.getPassword();
-        return String.join(";", fields);
-    }
-
 
     @Override
     public void remove(User user) throws DatabaseErrorException, NotFoundException {
-        updateOrRemove(user, false);
+        String sql = String.format("DELETE FROM %s WHERE dni = ?", TABLE_NAME);
+        connection = new MySqlConnection().conectar();
+        try (
+                PreparedStatement statement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)
+        ) {
+            statement.setString(1, user.getDni());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new DatabaseErrorException("Ha ocurrido un error en el acceso o conexión a la base de datos (delete)");
+        }
     }
 }
+

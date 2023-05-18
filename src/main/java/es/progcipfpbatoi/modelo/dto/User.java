@@ -1,5 +1,6 @@
 package es.progcipfpbatoi.modelo.dto;
 
+import java.sql.Date;
 import java.time.LocalDate;
 import java.util.Objects;
 
@@ -63,6 +64,10 @@ public class User {
 
     public LocalDate getBirthday() {
         return birthday;
+    }
+
+    public void setDni(String dni) {
+        this.dni = dni;
     }
 
     public String getPassword() {

@@ -1,5 +1,6 @@
 package es.progcipfpbatoi.controlador;
 
+import es.progcipfpbatoi.exceptions.DatabaseErrorException;
 import es.progcipfpbatoi.modelo.dto.User;
 import es.progcipfpbatoi.modelo.repositorios.UserRepository;
 import es.progcipfpbatoi.util.AlertMessages;
@@ -29,13 +30,17 @@ public class UserController implements Initializable {
         this.userRepository = userRepository;
     }
 
-    private ObservableList<User> getData() {
+    private ObservableList<User> getData() throws DatabaseErrorException {
         return FXCollections.observableArrayList(userRepository.findAll());
     }
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        userListView.setItems(getData());
+        try {
+            userListView.setItems(getData());
+        } catch (DatabaseErrorException e) {
+            throw new RuntimeException(e);
+        }
         userListView.setCellFactory((ListView<User> l) -> new UserListViewCellController(userListView, this, userRepository));
     }
 
@@ -58,7 +63,7 @@ public class UserController implements Initializable {
      * Se ejecuta al escribir sobre la barra de búsqueda (busca por email).
      */
     @FXML
-    private void searchUsers() {
+    private void searchUsers() throws DatabaseErrorException {
 
         userListView.getItems().clear();
         String texto = searchBar.getText();

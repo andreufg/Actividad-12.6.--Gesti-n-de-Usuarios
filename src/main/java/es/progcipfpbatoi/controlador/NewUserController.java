@@ -28,13 +28,13 @@ public class NewUserController extends UserFormController {
     }
 
     @Override
-    protected void saveUser(User user) throws AlreadyExistsException, DatabaseErrorException {
-        try {
-            userRepository.getById(user.getDni());
-            throw new AlreadyExistsException("El dni del usuario ya existe");
-        } catch (NotFoundException ex) {
-            userRepository.save(user);
-            AlertMessages.mostrarAlertInformacion("Nuevo usuario guardado con éxito");
-        }
+    protected void saveUser(User user) throws AlreadyExistsException, DatabaseErrorException, NotFoundException {
+            if (userRepository.getById(user.getDni())!=null){
+            throw new AlreadyExistsException("El dni del usuario ya existe");}
+            else {
+                userRepository.save(user);
+                AlertMessages.mostrarAlertInformacion("Nuevo usuario guardado con éxito");
+            }
+
     }
 }

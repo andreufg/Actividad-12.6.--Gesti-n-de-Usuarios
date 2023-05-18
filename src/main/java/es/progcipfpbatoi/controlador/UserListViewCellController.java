@@ -1,5 +1,6 @@
 package es.progcipfpbatoi.controlador;
 
+import es.progcipfpbatoi.exceptions.DatabaseErrorException;
 import es.progcipfpbatoi.exceptions.NotFoundException;
 import es.progcipfpbatoi.modelo.dto.User;
 import es.progcipfpbatoi.modelo.repositorios.UserRepository;
@@ -91,7 +92,7 @@ public class UserListViewCellController extends ListCell<User> {
         try {
             userRepository.remove(user);
             userListView.getItems().remove(user);
-        } catch (NotFoundException ex) {
+        } catch (NotFoundException | DatabaseErrorException ex) {
             ex.printStackTrace();
             AlertMessages.mostrarAlertError("No se ha podido eliminar al usuario");
         }

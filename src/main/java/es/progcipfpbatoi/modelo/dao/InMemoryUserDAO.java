@@ -1,4 +1,4 @@
-package es.progcipfpbatoi.modelo.repositorios;
+package es.progcipfpbatoi.modelo.dao;
 
 import es.progcipfpbatoi.exceptions.DatabaseErrorException;
 import es.progcipfpbatoi.exceptions.NotFoundException;
@@ -7,11 +7,11 @@ import es.progcipfpbatoi.modelo.dto.User;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
-public class InMemoryUserRepository implements UserRepository {
+public class InMemoryUserDAO implements UserDAO {
 
     private ArrayList<User> users;
 
-    public InMemoryUserRepository() {
+    public InMemoryUserDAO() {
         users = new ArrayList<>();
         setDefaultUsers();
     }
@@ -37,7 +37,7 @@ public class InMemoryUserRepository implements UserRepository {
         if (usuario != null) {
             return usuario;
         }
-        throw new NotFoundException("User", dni);
+        throw new NotFoundException("User");
     }
 
     private User findById(String dni) {

@@ -2,6 +2,7 @@ package es.progcipfpbatoi.controlador;
 
 import es.progcipfpbatoi.exceptions.AlreadyExistsException;
 import es.progcipfpbatoi.exceptions.DatabaseErrorException;
+import es.progcipfpbatoi.exceptions.NotFoundException;
 import es.progcipfpbatoi.modelo.dto.User;
 import es.progcipfpbatoi.modelo.repositorios.UserRepository;
 import es.progcipfpbatoi.util.AlertMessages;
@@ -141,6 +142,8 @@ public abstract class UserFormController implements Initializable {
             } catch (IOException ex) {
                 ex.printStackTrace();
                 AlertMessages.mostrarAlertError("No se puede mostrar el listado de usuarios");
+            } catch (NotFoundException e) {
+                throw new RuntimeException(e);
             }
         }
     }
@@ -164,5 +167,5 @@ public abstract class UserFormController implements Initializable {
      * @throws AlreadyExistsException
      * @throws DatabaseErrorException
      */
-    protected abstract void saveUser(User user) throws AlreadyExistsException, DatabaseErrorException;
+    protected abstract void saveUser(User user) throws AlreadyExistsException, DatabaseErrorException, NotFoundException;
 }
